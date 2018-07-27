@@ -8,11 +8,7 @@ import {
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 
 import { Schema as PluginSchema } from './schema';
-import {
-  Project,
-  getWorkspace,
-  getProjectFromWorkspace,
-} from '../utils/devkit-utils/config';
+import { getProject } from '../utils/project';
 import { PluginOptions } from './interface';
 
 import { pluginG2 } from './plugin.g2';
@@ -20,6 +16,7 @@ import { pluginCodeStyle } from './plugin.code-style';
 import { pluginNpm } from './plugin.npm';
 import { pluginYarn } from './plugin.yarn';
 import { pluginHmr } from './plugin.hmr';
+import { pluginDocker } from './plugin.docker';
 
 function installPackages() {
   return (host: Tree, context: SchematicContext) => {
@@ -29,14 +26,13 @@ function installPackages() {
 
 export default function(options: PluginSchema): Rule {
   return (host: Tree, context: SchematicContext) => {
-    const workspace = getWorkspace(host);
-    const project = getProjectFromWorkspace(workspace);
-    const projectPrefix = (project as any).prefix || 'app';
-    const sourceRoot = (project as any).sourceRoot || 'src';
+    const project = getProject(host, options.project);
     const pluginOptions: PluginOptions = {
       type: options.type,
-      projectPrefix,
-      sourceRoot,
+      name: project.name,
+      projectPrefix: project.prefix,
+      root: project.root,
+      sourceRoot: project.sourceRoot,
       project: options.project,
     };
 
@@ -57,8 +53,13 @@ export default function(options: PluginSchema): Rule {
       case 'hmr':
         rules.push(pluginHmr(pluginOptions));
         break;
+      case 'docker':
+        rules.push(pluginDocker(pluginOptions));
+        break;
       default:
-        throw new SchematicsException(`Could not find plugin name: ${options.name}`);
+        throw new SchematicsException(
+          `Could not find plugin name: ${options.name}`,
+        );
     }
 
     rules.push(installPackages());

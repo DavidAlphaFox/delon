@@ -10,9 +10,8 @@ import {
   template,
   move,
   filter,
-  SchematicsException,
 } from '@angular-devkit/schematics';
-import { strings, join } from '@angular-devkit/core';
+import { strings } from '@angular-devkit/core';
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import * as path from 'path';
 
@@ -26,37 +25,43 @@ import {
   scriptsToAngularJson,
 } from '../utils/json';
 import { VERSION, ZORROVERSION } from '../utils/lib-versions';
-import { overwriteFiles, addFiles } from '../utils/file';
-import {
-  getWorkspace,
-  getProjectFromWorkspace,
-  Project,
-} from '../utils/devkit-utils/config';
+import { addFiles } from '../utils/file';
+import { Project, getProject } from '../utils/project';
 import { addHeadStyle, addHtmlToBody } from '../utils/html';
+import { tryAddFile } from '../utils/alain';
+import { HMR_CONTENT } from '../utils/contents';
 
 const overwriteDataFileRoot = path.join(__dirname, 'overwrites');
 let project: Project;
-let projectPrefix = 'app';
-let appRoot = '/';
-let appSourceRoot = '/src';
 
 /** Remove files to be overwrite */
 function removeOrginalFiles() {
   return (host: Tree) => {
     [
-      `${appRoot}/README.md`,
-      `${appSourceRoot}/main.ts`,
-      `${appSourceRoot}/environments/environment.prod.ts`,
-      `${appSourceRoot}/environments/environment.ts`,
-      `${appSourceRoot}/styles.less`,
-      `${appSourceRoot}/app/app.module.ts`,
-      `${appSourceRoot}/app/app.component.spec.ts`,
-      `${appSourceRoot}/app/app.component.ts`,
-      `${appSourceRoot}/app/app.component.html`,
-      `${appSourceRoot}/app/app.component.less`,
+      `${project.root}/README.md`,
+      `${project.sourceRoot}/main.ts`,
+      `${project.sourceRoot}/environments/environment.prod.ts`,
+      `${project.sourceRoot}/environments/environment.ts`,
+      `${project.sourceRoot}/styles.less`,
+      `${project.sourceRoot}/app/app.module.ts`,
+      `${project.sourceRoot}/app/app.component.spec.ts`,
+      `${project.sourceRoot}/app/app.component.ts`,
+      `${project.sourceRoot}/app/app.component.html`,
+      `${project.sourceRoot}/app/app.component.less`,
     ]
       .filter(p => host.exists(p))
       .forEach(p => host.delete(p));
+  };
+}
+
+function fixMain() {
+  return (host: Tree) => {
+    // fix: main.ts using no hmr file
+    tryAddFile(
+      host,
+      `${project.sourceRoot}/main.ts`,
+      HMR_CONTENT.NO_HMR_MAIN_DOT_TS,
+    );
   };
 }
 
@@ -71,14 +76,10 @@ function addDependenciesToPackageJson(options: ApplicationOptions) {
       'ajv@^6.4.0',
     ]);
     // add ajv
-    scriptsToAngularJson(
-      host,
-      [
-        'node_modules/ajv/dist/ajv.bundle.js'
-      ],
-      'add',
-      ['build', 'test']
-    );
+    scriptsToAngularJson(host, ['node_modules/ajv/dist/ajv.bundle.js'], 'add', [
+      'build',
+      'test',
+    ]);
     // @delon/*
     addPackageToPackageJson(
       host,
@@ -96,7 +97,7 @@ function addDependenciesToPackageJson(options: ApplicationOptions) {
     const devs = [
       // ISSUES: [#10430](https://github.com/angular/angular-cli/issues/10430)
       `less@~2.7.0`,
-      `less-loader@~4.0.0`
+      `less-loader@~4.0.0`,
     ];
     if (devs.length) {
       addPackageToPackageJson(host, devs, 'devDependencies');
@@ -123,14 +124,14 @@ function addPathsToTsConfig() {
     [
       {
         path: 'tsconfig.json',
-        baseUrl: `${appSourceRoot}/`,
+        baseUrl: `${project.sourceRoot}/`,
       },
       {
-        path: `${appSourceRoot}/tsconfig.app.json`,
+        path: `${project.sourceRoot}/tsconfig.app.json`,
         baseUrl: './',
       },
       {
-        path: `${appSourceRoot}/tsconfig.spec.json`,
+        path: `${project.sourceRoot}/tsconfig.spec.json`,
         baseUrl: './',
       },
     ].forEach(item => {
@@ -181,30 +182,30 @@ function addCodeStylesToPackageJson() {
     tsLint.rules['directive-selector'] = [
       true,
       'attribute',
-      [projectPrefix, 'passport', 'exception', 'layout', 'header'],
+      [project.prefix, 'passport', 'exception', 'layout', 'header'],
       'camelCase',
     ];
     tsLint.rules['component-selector'] = [
       true,
       'element',
-      [projectPrefix, 'passport', 'exception', 'layout', 'header'],
+      [project.prefix, 'passport', 'exception', 'layout', 'header'],
       'kebab-case',
     ];
     overwriteJSON(host, 'tslint.json', tsLint);
     // app tslint
-    const sourceTslint = `${appSourceRoot}/tslint.json`;
+    const sourceTslint = `${project.sourceRoot}/tslint.json`;
     if (host.exists(sourceTslint)) {
       const appTsLint = getJSON(host, sourceTslint, 'rules');
       appTsLint.rules['directive-selector'] = [
         true,
         'attribute',
-        [projectPrefix, 'passport', 'exception', 'layout', 'header'],
+        [project.prefix, 'passport', 'exception', 'layout', 'header'],
         'camelCase',
       ];
       appTsLint.rules['component-selector'] = [
         true,
         'element',
-        [projectPrefix, 'passport', 'exception', 'layout', 'header'],
+        [project.prefix, 'passport', 'exception', 'layout', 'header'],
         'kebab-case',
       ];
       overwriteJSON(host, sourceTslint, appTsLint);
@@ -284,14 +285,31 @@ function addStyle(options: ApplicationOptions) {
     addFiles(
       host,
       [
-        `${appSourceRoot}/styles/index.less`,
-        `${appSourceRoot}/styles/theme.less`,
+        `${project.sourceRoot}/styles/index.less`,
+        `${project.sourceRoot}/styles/theme.less`,
       ],
       overwriteDataFileRoot,
     );
 
     return host;
   };
+}
+
+function mergeFiles(options: ApplicationOptions, from: string, to: string) {
+  return mergeWith(
+    apply(url(from), [
+      options.i18n ? noop() : filter(p => p.indexOf('i18n') === -1),
+      options.form ? noop() : filter(p => p.indexOf('json-schema') === -1),
+      template({
+        utils: strings,
+        ...options,
+        dot: '.',
+        VERSION,
+        ZORROVERSION,
+      }),
+      move(to),
+    ]),
+  );
 }
 
 function addFilesToRoot(options: ApplicationOptions) {
@@ -307,7 +325,7 @@ function addFilesToRoot(options: ApplicationOptions) {
           VERSION,
           ZORROVERSION,
         }),
-        move(appSourceRoot),
+        move(project.sourceRoot),
       ]),
     ),
     mergeWith(
@@ -321,9 +339,8 @@ function addFilesToRoot(options: ApplicationOptions) {
           VERSION,
           ZORROVERSION,
         }),
-        move('/'),
       ]),
-    ),
+    )
   ]);
 }
 
@@ -335,11 +352,7 @@ function installPackages() {
 
 export default function(options: ApplicationOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
-    const workspace = getWorkspace(host);
-    project = getProjectFromWorkspace(workspace);
-    appRoot = (project as any).root;
-    appSourceRoot = (project as any).sourceRoot;
-    projectPrefix = (project as any).prefix || 'app';
+    project = getProject(host, options.project);
 
     return chain([
       // @delon/* dependencies
@@ -353,6 +366,7 @@ export default function(options: ApplicationOptions): Rule {
       // files
       removeOrginalFiles(),
       addFilesToRoot(options),
+      fixMain(),
       addStyle(options),
       installPackages(),
     ])(host, context);

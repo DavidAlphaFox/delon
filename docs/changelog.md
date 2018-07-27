@@ -6,6 +6,48 @@ title:
 type: Other
 ---
 
+### 1.2.0
+
+`2018-7-27`
+
+- 脚手架
+  - 增加 `ng-alain-version` 版本号至 `body` 元素，[3e1966](https://github.com/cipchk/ng-alain/commit/3e1966)
+  - 升级至 Angular 6.1.x 版本号，支持 typescript 2.9.x，[d0adcd](https://github.com/cipchk/ng-alain/commit/d0adcd)
+  - 重构引用 `node_modules/@delon` 开头的样式路径为 `~@delon`，[67c771](https://github.com/cipchk/ng-alain/commit/67c771)
+- @delon/theme
+  - 增加 `VERSION` 版本号
+- Schematics
+  - 修复 `ng add ng-alain` 在 Angular Cli 6.1.x 下无法运行，[#601](https://github.com/cipchk/ng-alain/issues/601)
+
+### 1.1.5
+
+`2018-7-22`
+
+- 脚手架，移除 Docker 文件，可通过 [docker](https://ng-alain.com/cli/plugin#docker) 插件安装支持
+- @delon/theme
+  - 重构 `styles` 目录结构
+  - 新增 `DelonThemeConfig` 统一对 `_HttpClient` 设置空值、时间处理方式
+- @delon/abc
+  - 修复 `page-header` 无法解析包含查询参数问题
+  - 修复 `pip` 无图例时百分比显示不正确，[#578](https://github.com/cipchk/ng-alain/issues/578)
+- @delon/auth
+  - 修复 `allow_anonymous_key` 在 URL 中无效问题
+- Schematics
+  - 重构所有代码
+  - 新增 `docker` [插件](https://ng-alain.com/cli/plugin#docker)
+  - 修复 `ng add` 若取消 `hmr` 可能导致项目无法运行问题
+
+### 1.1.4
+
+`2018-7-16`
+
+- @delon/abc
+  - `page-header`
+    - 增加 `title` 属性支持 `ng-template`
+    - **BREAKING CHANGES** `titleSync` 变更为 `syncTitle`
+- @delon/util
+  - 新增 `ArrayService` 数组操作及与树之间的转化
+
 ### 1.1.3
 
 `2018-7-5`
