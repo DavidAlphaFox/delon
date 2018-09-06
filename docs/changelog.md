@@ -6,6 +6,48 @@ title:
 type: Other
 ---
 
+### 1.4.0
+
+`2018-9-4`
+
+- 脚手架
+  - 取消 less 降级，参考 [36668e](https://github.com/cipchk/ng-alain/commit/36668e) 变更纪录
+- @delon/abc
+  - 增加 `simple-table` 所有重置方法对 `extraParams` 合并选项，[#652](https://github.com/cipchk/ng-alain/issues/652)
+  - 修复 `reuse-tab` 最大标签超限时引起高亮错位，[#647](https://github.com/cipchk/ng-alain/issues/647)
+  - 移除 `exception` 无效 `actions` 属性，[#658](https://github.com/cipchk/ng-alain/issues/658)
+- @delon/theme
+  - 增加 `patch`、`put` 方法的扩展，[#662](https://github.com/cipchk/ng-alain/issues/662)
+- @delon/form
+  - 增加 `tree-select` 小部件
+
+> 此版本将是 [2.x](https://next.ng-alain.com/) 最后一个次版本号
+
+### 1.3.3
+
+`2018-8-25`
+
+- @delon/theme
+  - 修复 `ModalHelper` 可能会引进 `ngOriginalError` 异常，[#125](https://github.com/cipchk/delon/issues/125) [#626](https://github.com/cipchk/ng-alain/issues/626)
+  - 修复菜单 `group` 属性为 `false` 时应不显示组名，[#137](https://github.com/cipchk/delon/issues/137) [#140](https://github.com/cipchk/delon/issues/140)
+- @delon/form
+  - 放宽手机号格式校验规则，[#645](https://github.com/cipchk/ng-alain/issues/645)
+  - 修复 `placeholder` 属性支持字符串数组，[#142](https://github.com/cipchk/delon/issues/142)
+
+### 1.3.2
+
+`2018-8-19`
+
+- 脚手架
+  - 修复取消时无法清除进度条，[f67c0c](https://github.com/cipchk/ng-alain/commit/f67c0c)
+  - 移除simple-line-icons类库，尽可能使用 ng-zorro-antd 图标库，[28f873](https://github.com/cipchk/ng-alain/commit/28f873)
+- @delon/theme
+  - 增加旋转样式
+- @delon/abc
+  - 修复 `simple-table` 自定义列刷新时丢失问题，[#622](https://github.com/cipchk/ng-alain/issues/622)
+- @delon/form
+  - 修复 `date` 小部件无效属性 `displayFormat`，[#640](https://github.com/cipchk/ng-alain/issues/640)
+
 ### 1.3.1
 
 `2018-8-7`

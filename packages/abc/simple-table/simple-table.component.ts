@@ -45,6 +45,7 @@ import {
   ReqReNameType,
   SimpleTableMultiSort,
   SimpleTableRowClick,
+  SimpleTableLoadOptions,
 } from './interface';
 import { AdSimpleTableConfig } from './simple-table.config';
 import { SimpleTableExport } from './simple-table-export';
@@ -68,6 +69,8 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   _allChecked = false;
   _indeterminate = false;
   _columns: SimpleTableColumn[] = [];
+  _customTitles: { [key: string]: TemplateRef<any> } = {};
+  _customRows: { [key: string]: TemplateRef<any> } = {};
 
   //#region fields
 
@@ -406,10 +409,13 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
    * @param pi 指定当前页码，默认：`1`
    * @param extraParams 重新指定 `extraParams` 值
    */
-  load(pi = 1, extraParams?: any) {
+  load(pi = 1, extraParams?: any, options?: SimpleTableLoadOptions) {
     if (pi !== -1) this.pi = pi;
     if (typeof extraParams !== 'undefined') {
-      this.extraParams = extraParams;
+      this.extraParams =
+        options && options.merge
+          ? Object.assign(this.extraParams, extraParams)
+          : extraParams;
     }
     this._change('pi');
   }
@@ -418,8 +424,8 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
    * 重新刷新当前页
    * @param extraParams 重新指定 `extraParams` 值
    */
-  reload(extraParams?: any) {
-    this.load(-1, extraParams);
+  reload(extraParams?: any, options?: SimpleTableLoadOptions) {
+    this.load(-1, extraParams, options);
   }
 
   /**
@@ -431,12 +437,12 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
    *
    * @param extraParams 重新指定 `extraParams` 值
    */
-  reset(extraParams?: any) {
+  reset(extraParams?: any, options?: SimpleTableLoadOptions) {
     this.clearCheck();
     this.clearRadio();
     this.clearFilter();
     this.clearSort();
-    this.load(1, extraParams);
+    this.load(1, extraParams, options);
   }
 
   private getAjaxData(url?: string): Observable<any> {
@@ -939,16 +945,21 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     const countReduce = (a: number, b: SimpleTableColumn) =>
       a + +b.width.toString().replace('px', '');
     // left width
-    list.filter(w => w.fixed && w.fixed === 'left' && w.width)
-        .forEach((item, idx) =>
-          item._left = list.slice(0, idx).reduce(countReduce, 0) + 'px'
-        );
+    list
+      .filter(w => w.fixed && w.fixed === 'left' && w.width)
+      .forEach(
+        (item, idx) =>
+          (item._left = list.slice(0, idx).reduce(countReduce, 0) + 'px'),
+      );
     // right width
-    list.filter(w => w.fixed && w.fixed === 'right' && w.width)
-        .reverse()
-        .forEach((item, idx) =>
-          item._right = (idx > 0 ? list.slice(-idx).reduce(countReduce, 0) : 0) + 'px'
-        );
+    list
+      .filter(w => w.fixed && w.fixed === 'right' && w.width)
+      .reverse()
+      .forEach(
+        (item, idx) =>
+          (item._right =
+            (idx > 0 ? list.slice(-idx).reduce(countReduce, 0) : 0) + 'px'),
+      );
   }
 
   //#endregion
@@ -1086,6 +1097,12 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
       item.buttons = this.btnCoerce(item.buttons);
       // i18n
       if (item.i18n && this.i18nSrv) item.title = this.i18nSrv.fanyi(item.i18n);
+      // custom row
+      if (item.render) {
+        item.__renderTitle = this._customTitles[item.render];
+        item.__render = this._customRows[item.render];
+      }
+
       ++idx;
       newColumns.push(item);
     }
